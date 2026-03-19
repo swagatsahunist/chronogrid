@@ -1,4 +1,7 @@
-
+/* ================================================================
+   CHRONOGRID — app.js  Complete Application Logic
+   NIST Berhampur | B.Tech 6th Semester | 2024-25
+   ================================================================ */
 'use strict';
 
 /* ━━━ CONFIG ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -44,7 +47,10 @@ function periodLabel(startMins, endMins){
 /* ━━━ APP STATE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const A = { user: null, db: null };
 
-/* ━━━ STORAGE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* ━━━ API CONFIG ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const API = 'https://chronogrid-production.up.railway.app';
+
+/* ━━━ STORAGE (localStorage fallback only) ━━━━━━━━━━━━━━━━━━━━ */
 function save() { try { localStorage.setItem(C.SK, JSON.stringify(A.db)); } catch(e){} }
 function load() {
   try {
@@ -53,6 +59,208 @@ function load() {
   } catch(e){}
   return false;
 }
+
+/* ━━━ API HELPERS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function apiFetch(path, opts={}){
+  const res = await fetch(API+path, {
+    headers:{'Content-Type':'application/json'},
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if(!res.ok) throw new Error('API error '+res.status);
+  return res.json();
+}
+async function apiGet(path){ return apiFetch(path); }
+async function apiPost(path,body){ return apiFetch(path,{method:'POST',body}); }
+async function apiPut(path,body){ return apiFetch(path,{method:'PUT',body}); }
+async function apiDel(path){ return apiFetch(path,{method:'DELETE'}); }
+
+/* ━━━ LOAD ALL DATA FROM API INTO A.db ━━━━━━━━━━━━━━━━━━━━━━━━ */
+async function loadFromAPI(){
+  showLoading('Connecting to database...');
+  try {
+    const [students, faculty, branches, sections, rooms, subjects,
+           announcements, periods] = await Promise.all([
+      apiGet('/api/students'),
+      apiGet('/api/faculty'),
+      apiGet('/api/branches'),
+      apiGet('/api/sections'),
+      apiGet('/api/rooms'),
+      apiGet('/api/subjects'),
+      apiGet('/api/announcements'),
+      apiGet('/api/periods')
+    ]);
+
+    // Normalise branches
+    const courses = branches.map(b=>({id:b.branch_code, name:b.branch_name||b.name, color:b.color}));
+
+    // Normalise rooms
+    const roomsN = rooms.map(r=>({id:r.room_id, name:r.name||r.room_name, type:r.type||r.room_type, cap:r.cap||r.capacity, bldg:r.bldg||r.building, floor:r.floor}));
+
+    // Normalise sections
+    const sectionsN = sections.map(s=>({id:s.secId, branch:s.branch, sec:s.section||s.sec, room:s.room, labRoom:s.labRoom}));
+
+    // Normalise subjects — add legacy branch field
+    const subjectsN = subjects.map(s=>({
+      id:s.code||s.subject_code, code:s.code||s.subject_code,
+      name:s.name||s.subject_name, type:s.type||s.subject_type,
+      credits:s.credits, ppw:s.ppw||s.periods_per_week,
+      color:s.color, branches:s.branches||[s.branch],
+      branch:(s.branches&&s.branches[0])||s.branch
+    }));
+
+    // Normalise students
+    const studentsN = students.map(s=>({
+      id:'S'+String(s.id), name:s.name||s.student_name,
+      email:s.email, pw:'student@123', role:'student',
+      branch:s.branch, section:s.section,
+      secId:s.secId||s.branch+'-'+s.section,
+      semester:s.semester||6, rollNo:s.rollNo||s.roll_number,
+      gender:s.gender, phone:s.phone, dob:s.dob,
+      address:s.address, photo:s.photo,
+      dbId: s.id  // keep original DB id for API calls
+    }));
+
+    // Normalise faculty
+    const facultyN = faculty.map(f=>({
+      id:'F'+String(f.id).padStart(2,'0'), name:f.name||f.faculty_name,
+      email:f.email, pw:'faculty@123', role:'faculty',
+      dept:f.dept||f.department, desig:f.desig||f.designation,
+      gender:f.gender, phone:f.phone, dob:f.dob,
+      exp:f.exp||f.experience||0, qual:f.qual||f.qualification,
+      spec:f.spec||f.specialization, photo:f.photo,
+      subs:f.subs||[], sections:f.sections||[],
+      dbId: f.id
+    }));
+
+    // Admins
+    const admins = [{
+      id:'ADM01', name:'System Administrator',
+      email:'admin@nist.edu.in', pw:'admin@123', role:'admin',
+      dept:'Administration', desig:'System Admin',
+      phone:'9999999999', gender:'Male', dob:'1980-01-01', photo:null
+    }];
+
+    // Build period config from DB periods
+    const periodConfig = buildPeriodConfigFromDB(periods);
+
+    // Build timetables — fetch for all sections
+    const timetables = [];
+    for(const sec of sectionsN){
+      try {
+        const slots = await apiGet('/api/timetable/'+sec.id);
+        timetables.push(buildTTFromAPI(sec.id, slots, periodConfig.periods));
+      } catch(e){ /* skip if no timetable for section */ }
+    }
+
+    // Build empty attSummary — will be loaded per student on demand
+    const attSummary = {};
+    for(const s of studentsN){
+      const subs = subjectsN.filter(sb=>sb.branches.includes(s.branch));
+      for(const sb of subs){
+        attSummary[s.id+'_'+sb.id] = {total:0, present:0, absent:0};
+      }
+    }
+
+    // Normalise announcements
+    const announcementsN = announcements.map(a=>({
+      id:'AN'+a.id, title:a.title, body:a.body, author:a.author,
+      date:a.date?a.date.split('T')[0]:new Date().toISOString().split('T')[0],
+      type:a.type||'general', priority:a.priority||'medium',
+      branches: typeof a.branches==='string' ? a.branches.split(',') : (a.branches||['CSE','IT','CST'])
+    }));
+
+    // Build exam schedule
+    const examSchedule = await loadExamSchedule();
+
+    A.db = {
+      version:4, courses, sections:sectionsN, rooms:roomsN,
+      subjects:subjectsN, faculty:facultyN, students:studentsN,
+      admins, users:[...admins,...facultyN,...studentsN],
+      timetables, attSummary, attRecords:[],
+      announcements:announcementsN, examSchedule,
+      leaveRequests:[], notifications:[],
+      periodConfig
+    };
+    save(); // cache in localStorage as backup
+    hideLoading();
+    return true;
+  } catch(err){
+    console.error('API load failed:', err);
+    hideLoading();
+    return false;
+  }
+}
+
+async function loadExamSchedule(){
+  try {
+    const [cse,it,cst] = await Promise.all([
+      apiGet('/api/exams/CSE'), apiGet('/api/exams/IT'), apiGet('/api/exams/CST')
+    ]);
+    return [...cse,...it,...cst].map(e=>({
+      id:'EX'+e.id, subId:e.subId||e.subject_code,
+      name:e.name||e.subject_name,
+      date:e.date?e.date.split('T')[0]:'',
+      time:e.time||'10:00 AM', venue:e.venue,
+      duration:e.duration||'3 hrs', branch:e.branch||e.branch_code
+    }));
+  } catch(e){ return buildExamSchedule(); }
+}
+
+function buildPeriodConfigFromDB(periods){
+  const mapped = periods.map(p=>({
+    n: p.period_number,
+    time: p.label || periodLabel(hmToMins(String(p.start_time).slice(0,5)), hmToMins(String(p.end_time).slice(0,5))),
+    start: hmToMins(String(p.start_time).slice(0,5)),
+    end:   hmToMins(String(p.end_time).slice(0,5))
+  }));
+  const lunch = {time:'12:00–1:00 PM', start:720, end:780};
+  if(!mapped.length) return buildDefaultPeriodConfig();
+  return { periods:mapped, lunch, periodDuration:60, morningBreak:10, afternoonBreak:0, labDuration:2, maxContiguous:2, workingDays:6 };
+}
+
+function buildTTFromAPI(secId, slots, periods){
+  const grid = {};
+  C.days.forEach(d=>{ grid[d]=periods.map((_,i)=>({period:i+1,subId:null,facId:null,room:null,type:'free'})); });
+  for(const slot of slots){
+    const dayName = slot.day;
+    if(!grid[dayName]) continue;
+    const startMins = hmToMins(String(slot.start_time).slice(0,5));
+    const pi = periods.findIndex(p=>p.start===startMins);
+    if(pi===-1) continue;
+    const endMins = hmToMins(String(slot.end_time).slice(0,5));
+    const numSlots = periods.filter(p=>p.start>=startMins && p.end<=endMins).length || 1;
+    for(let k=0;k<numSlots;k++){
+      if(pi+k >= periods.length) break;
+      grid[dayName][pi+k] = {
+        period: pi+k+1,
+        subId:  slot.subId || slot.subject_code,
+        facId:  'F'+String(slot.facId||0).padStart(2,'0'),
+        room:   slot.roomId || slot.room_id,
+        type:   slot.type  || slot.slot_type || 'theory'
+      };
+    }
+  }
+  return { secId, branch:secId.split('-')[0], section:secId.split('-')[1], schedule:grid };
+}
+
+/* ━━━ LOADING OVERLAY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function showLoading(msg='Loading...'){
+  let ov = document.getElementById('loading-overlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'loading-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(6,8,15,.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+    ov.innerHTML = `
+      <div style="width:48px;height:48px;border:3px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:spin 1s linear infinite"></div>
+      <div id="loading-msg" style="color:var(--teal);font-family:var(--font-head);font-size:16px;font-weight:700">${msg}</div>
+      <div style="color:var(--text3);font-size:13px">Connecting to Railway MySQL...</div>`;
+    document.body.appendChild(ov);
+  } else {
+    document.getElementById('loading-msg').textContent = msg;
+  }
+}
+function hideLoading(){ const ov=document.getElementById('loading-overlay'); if(ov) ov.remove(); }
 
 /* ━━━ SEED DATA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 function seedDB() {
@@ -471,6 +679,8 @@ function doLogin(){
   const err=$('li-err');
   err.style.display='none';
   if(!email||!pass){ err.textContent='Please enter email and password.'; err.style.display='block'; return; }
+
+  // Check against loaded A.db (which came from API)
   const allUsers=[...A.db.admins,...A.db.faculty,...A.db.students];
   const user=allUsers.find(u=>u.email.toLowerCase()===email);
   if(!user){ err.textContent='No account found with this email.'; err.style.display='block'; return; }
@@ -478,8 +688,24 @@ function doLogin(){
   if(user.role!==loginRole){ err.textContent=`This account is a ${user.role} account. Select the correct role.`; err.style.display='block'; return; }
   A.user=user;
   if(user.role==='admin'){ showPage('admin'); renderAdminDash(); }
-  else if(user.role==='faculty'){ showPage('faculty'); renderFacultyDash(); }
-  else { showPage('student'); renderStudentDash(); }
+  else if(user.role==='faculty'){
+    // Load attendance summary for faculty's sections
+    showPage('faculty'); renderFacultyDash();
+  }
+  else {
+    // Load attendance summary for this student
+    loadStudentAttendance(user).then(()=>{ showPage('student'); renderStudentDash(); });
+  }
+}
+
+async function loadStudentAttendance(user){
+  try {
+    const rows = await apiGet('/api/attendance/summary/'+user.dbId);
+    for(const r of rows){
+      const k = user.id+'_'+r.subjectId;
+      A.db.attSummary[k] = { total:parseInt(r.total)||0, present:parseInt(r.present)||0, absent:parseInt(r.absent)||0 };
+    }
+  } catch(e){ console.warn('Could not load attendance:', e); }
 }
 
 function doRegister(){
@@ -1241,6 +1467,7 @@ function submitAttendance(secId,subId,date){
     const selBtn=row.querySelector('.att-btn.sel-P,.att-btn.sel-A,.att-btn.sel-L');
     if(selBtn) attMap[selBtn.dataset.sid]=selBtn.dataset.v;
   });
+  // Update local summary
   A.db.attRecords=A.db.attRecords.filter(r=>!(r.secId===secId&&r.subId===subId&&r.date===date));
   A.db.attRecords.push({secId,subId,date,attendance:attMap,markedBy:A.user.id,markedAt:new Date().toISOString()});
   for(const [stuId,status] of Object.entries(attMap)){
@@ -1251,7 +1478,15 @@ function submitAttendance(secId,subId,date){
     else A.db.attSummary[k].absent++;
   }
   save();
-  toast('Attendance saved for '+secId+' · '+subId,'ok');
+  // Convert attMap keys from "S001" format to real DB ids for API
+  const apiAttMap={};
+  for(const [stuId,status] of Object.entries(attMap)){
+    const stu=A.db.students.find(s=>s.id===stuId);
+    if(stu&&stu.dbId) apiAttMap[stu.dbId] = status==='P'?'Present':status==='A'?'Absent':'Late';
+  }
+  apiPost('/api/attendance',{secId,subjectCode:subId,date,attendance:apiAttMap,markedBy:A.user.dbId||1})
+    .then(()=>toast('Attendance saved to database ✓','ok'))
+    .catch(()=>toast('Attendance saved locally (API error)','warn'));
 }
 
 function facAnalytics(){
@@ -1359,8 +1594,12 @@ function facAnnouncements(){
 function postAnnouncement(){
   const title=($('ann-title')||{}).value; const body=($('ann-body')||{}).value;
   if(!title||!body){ toast('Please fill title and message','err'); return; }
-  A.db.announcements.unshift({id:uid(),title,body,author:A.user.name,date:new Date().toISOString().split('T')[0],type:$('ann-type').value,priority:$('ann-prio').value,branches:['CSE','IT','CST']});
-  save(); toast('Announcement posted!','ok'); facView('announcements');
+  const ann={id:uid(),title,body,author:A.user.name,date:new Date().toISOString().split('T')[0],type:$('ann-type').value,priority:$('ann-prio').value,branches:['CSE','IT','CST']};
+  A.db.announcements.unshift(ann);
+  save();
+  apiPost('/api/announcements',{title,body,author:A.user.name,type:ann.type,priority:ann.priority,branches:'CSE,IT,CST'})
+    .catch(()=>{});
+  toast('Announcement posted!','ok'); facView('announcements');
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2831,21 +3070,27 @@ function renderModules(){
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    INIT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-document.addEventListener('DOMContentLoaded', () => {
-  const loaded = load();
-  if(!loaded || !A.db){
-    // Fresh install — seed everything
-    seedDB();
-  } else if(A.db.version !== 4){
-    // Migrate existing data: just add periodConfig, keep all students/faculty/timetables
-    if(!A.db.periodConfig){
-      A.db.periodConfig = buildDefaultPeriodConfig();
-    }
-    A.db.version = 4;
-    save();
-  }
+document.addEventListener('DOMContentLoaded', async () => {
   startClock();
   renderHomePage();
-  // Default to auth page on init — comment out to start on home
-  // showPage('auth');
+
+  // Try loading from API first
+  const apiOk = await loadFromAPI();
+
+  if(!apiOk){
+    // API failed — fall back to localStorage or seed data
+    console.warn('API unavailable — falling back to local data');
+    const loaded = load();
+    if(!loaded || !A.db){
+      seedDB();
+    } else if(A.db.version !== 4){
+      if(!A.db.periodConfig) A.db.periodConfig = buildDefaultPeriodConfig();
+      A.db.version = 4;
+      save();
+    }
+    toast('Could not reach database — showing cached data','warn');
+  }
+
+  // Re-render home page with real data counts
+  renderHomePage();
 });
