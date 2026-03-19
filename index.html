@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ChronoGrid — Smart Timetable System | NIST Berhampur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+<!-- =============================================
+     LANDING PAGE
+     ============================================= -->
+<div id="pg-home" class="page active">
+
+  <!-- NAV -->
+  <nav class="home-nav">
+    <div class="nav-wrap">
+      <div class="brand" onclick="showPage('home')">
+        <div class="brand-icon"><i class="fas fa-calendar-alt"></i></div>
+        <span>Chrono<em>Grid</em></span>
+      </div>
+      <div class="nav-links">
+        <a onclick="smoothScroll('sec-features')">Features</a>
+        <a onclick="smoothScroll('sec-how')">How It Works</a>
+        <a onclick="smoothScroll('sec-modules')">Modules</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn-ghost" onclick="showPage('auth')">Sign In</button>
+        <button class="btn-solid" onclick="showPage('auth')">Get Started</button>
+      </div>
+      <button class="mobile-menu-btn" onclick="toggleMobileNav()"><i class="fas fa-bars"></i></button>
+    </div>
+    <div class="mobile-nav" id="mobile-nav">
+      <a onclick="smoothScroll('sec-features');toggleMobileNav()">Features</a>
+      <a onclick="smoothScroll('sec-how');toggleMobileNav()">How It Works</a>
+      <a onclick="showPage('auth');toggleMobileNav()">Sign In / Register</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="grid-overlay"></div>
+      <div class="orb orb1"></div>
+      <div class="orb orb2"></div>
+      <div class="orb orb3"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-tag"><span class="tag-dot"></span>NIST Berhampur · B.Tech 6th Semester · 2024-25</div>
+      <h1>The Smartest Way to<br/><span class="hl">Manage Academic<br/>Schedules</span></h1>
+      <p>One unified platform for Students, Faculty &amp; Administrators. AI-powered timetable generation, real-time attendance, and seamless coordination.</p>
+      <div class="hero-btns">
+        <button class="btn-solid btn-lg" onclick="showPage('auth')"><i class="fas fa-rocket"></i> Launch System</button>
+        <button class="btn-ghost btn-lg" onclick="smoothScroll('sec-how')"><i class="fas fa-play"></i> See How It Works</button>
+      </div>
+      <div class="hero-stats">
+        <div class="hstat"><span>80</span><p>Students</p></div>
+        <div class="hstat"><span>15</span><p>Faculty</p></div>
+        <div class="hstat"><span>3</span><p>Branches</p></div>
+        <div class="hstat"><span>8</span><p>Sections</p></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="floating-card card-1">
+        <div class="fc-icon fc-blue"><i class="fas fa-check"></i></div>
+        <div><b>Attendance Marked</b><p>CS601 · Section A · 42 present</p></div>
+      </div>
+      <div class="floating-card card-2">
+        <div class="fc-icon fc-green"><i class="fas fa-bolt"></i></div>
+        <div><b>Timetable Generated</b><p>AI resolved 47 constraints</p></div>
+      </div>
+      <div class="floating-card card-3">
+        <div class="fc-icon fc-amber"><i class="fas fa-clock"></i></div>
+        <div><b>Next: OS Lab</b><p>Computer Lab 1 · in 20 min</p></div>
+      </div>
+      <div class="mini-tt">
+        <div class="mtt-title"><i class="fas fa-table"></i> CSE · Section A · Week Schedule</div>
+        <div class="mtt-grid" id="heroTT"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="sec-features" class="section features-section">
+    <div class="sec-label">Platform Features</div>
+    <h2>Everything an Institution Needs</h2>
+    <p class="sec-sub">Built for modern academic management with cutting-edge scheduling intelligence</p>
+    <div class="features-grid" id="featuresGrid"></div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="sec-how" class="section how-section">
+    <div class="sec-label">Workflow</div>
+    <h2>How ChronoGrid Works</h2>
+    <p class="sec-sub">From schedule creation to attendance tracking — everything connected</p>
+    <div class="how-grid" id="howGrid"></div>
+  </section>
+
+  <!-- MODULES -->
+  <section id="sec-modules" class="section modules-section">
+    <div class="sec-label">Access Modules</div>
+    <h2>Three Powerful Dashboards</h2>
+    <p class="sec-sub">Tailored experiences for every role in the institution</p>
+    <div class="modules-grid" id="modulesGrid"></div>
+  </section>
+
+  <!-- CTA BAND -->
+  <section class="cta-band">
+    <div class="cta-inner">
+      <div class="cta-icon"><i class="fas fa-brain"></i></div>
+      <div class="cta-text">
+        <h3>AI-Powered Timetable Generation</h3>
+        <p>Our constraint-satisfaction algorithm resolves complex scheduling conflicts — faculty workload, room availability, lab requirements — in seconds.</p>
+      </div>
+      <button class="btn-solid" onclick="showPage('auth')">Try Now <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </section>
+
+  <footer class="home-footer">
+    <div class="brand" style="justify-content:center;">
+      <div class="brand-icon"><i class="fas fa-calendar-alt"></i></div>
+      <span>Chrono<em>Grid</em></span>
+    </div>
+    <p>Smart Timetable Management System · NIST Berhampur · Lab Based Project 2026</p>
+  </footer>
+</div>
+
+<!-- =============================================
+     AUTH PAGE
+     ============================================= -->
+<div id="pg-auth" class="page">
+  <div class="auth-scene">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+  </div>
+  <div class="auth-wrap">
+    <div class="auth-brand" onclick="showPage('home')">
+      <div class="brand-icon"><i class="fas fa-calendar-alt"></i></div>
+      <span>Chrono<em>Grid</em></span>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button id="tab-login" class="auth-tab active" onclick="switchTab('login')">Login</button>
+        <button id="tab-reg" class="auth-tab" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="auth-login">
+        <h2>Welcome Back</h2>
+        <p class="auth-sub">Choose your role and sign in to continue</p>
+        <div class="role-pills" id="loginRoles">
+          <div class="role-pill active" data-r="student" onclick="setRole('login','student')"><i class="fas fa-user-graduate"></i><span>Student</span></div>
+          <div class="role-pill" data-r="faculty" onclick="setRole('login','faculty')"><i class="fas fa-chalkboard-teacher"></i><span>Faculty</span></div>
+          <div class="role-pill" data-r="admin" onclick="setRole('login','admin')"><i class="fas fa-user-shield"></i><span>Admin</span></div>
+        </div>
+        <div class="fgroup">
+          <label>Email Address</label>
+          <div class="finput"><i class="fas fa-envelope"></i><input type="email" id="li-email" placeholder="your@email.com"/></div>
+        </div>
+        <div class="fgroup">
+          <label>Password</label>
+          <div class="finput"><i class="fas fa-lock"></i><input type="password" id="li-pass" placeholder="••••••••"/><i class="fas fa-eye eye-toggle" onclick="toggleEye('li-pass',this)"></i></div>
+        </div>
+        <div id="li-err" class="msg-error" style="display:none"></div>
+        <button class="btn-solid btn-full" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>
+        <div class="demo-creds">
+          <div class="dc-head">Quick Demo Credentials</div>
+          <div class="dc-row"><span class="dc-lbl">Admin</span><code>admin@nist.edu.in / admin@123</code></div>
+          <div class="dc-row"><span class="dc-lbl">Faculty</span><code>rajesh.kumar@nist.edu.in / faculty@123</code></div>
+          <div class="dc-row"><span class="dc-lbl">Student</span><code>21cse001@nist.edu.in / student@123</code></div>
+        </div>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="auth-reg" style="display:none">
+        <h2>Create Account</h2>
+        <p class="auth-sub">Register as a student or faculty member</p>
+        <div class="role-pills" id="regRoles">
+          <div class="role-pill active" data-r="student" onclick="setRole('reg','student')"><i class="fas fa-user-graduate"></i><span>Student</span></div>
+          <div class="role-pill" data-r="faculty" onclick="setRole('reg','faculty')"><i class="fas fa-chalkboard-teacher"></i><span>Faculty</span></div>
+        </div>
+        <div id="reg-fields"></div>
+        <div id="reg-err" class="msg-error" style="display:none"></div>
+        <div id="reg-ok" class="msg-success" style="display:none"></div>
+        <button class="btn-solid btn-full" onclick="doRegister()"><i class="fas fa-user-plus"></i> Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================
+     STUDENT DASHBOARD
+     ============================================= -->
+<div id="pg-student" class="page dash-page">
+  <aside class="sidebar" id="stu-sidebar">
+    <div class="sb-head">
+      <div class="brand-icon sm"><i class="fas fa-calendar-alt"></i></div>
+      <span class="sb-title">ChronoGrid</span>
+      <button class="sb-close" onclick="closeSidebar('stu-sidebar')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sb-user" id="stu-sbuser"></div>
+    <nav class="sb-nav">
+      <div class="sb-section">MAIN</div>
+      <a class="slink active" data-v="overview" onclick="stuView('overview')"><i class="fas fa-th-large"></i><span>Overview</span></a>
+      <a class="slink" data-v="timetable" onclick="stuView('timetable')"><i class="fas fa-calendar-week"></i><span>My Timetable</span></a>
+      <a class="slink" data-v="attendance" onclick="stuView('attendance')"><i class="fas fa-clipboard-check"></i><span>Attendance</span></a>
+      <a class="slink" data-v="nextclass" onclick="stuView('nextclass')"><i class="fas fa-clock"></i><span>Next Class</span></a>
+      <div class="sb-section">EXTRAS</div>
+      <a class="slink" data-v="exams" onclick="stuView('exams')"><i class="fas fa-file-alt"></i><span>Exam Schedule</span></a>
+      <a class="slink" data-v="performance" onclick="stuView('performance')"><i class="fas fa-chart-line"></i><span>Performance</span></a>
+      <a class="slink" data-v="notifications" onclick="stuView('notifications')"><i class="fas fa-bell"></i><span>Notifications<span id="stu-nbadge" class="nbadge"></span></span></a>
+      <div class="sb-section">ACCOUNT</div>
+      <a class="slink" data-v="profile" onclick="stuView('profile')"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+      <a class="slink logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+    </nav>
+  </aside>
+  <div class="dash-main">
+    <header class="dash-hdr">
+      <button class="menu-btn" onclick="openSidebar('stu-sidebar')"><i class="fas fa-bars"></i></button>
+      <div class="hdr-title" id="stu-hdrtitle">Overview</div>
+      <div class="hdr-right">
+        <div class="hdr-clock" id="stu-clock"></div>
+        <div class="hdr-av" id="stu-hdrav" onclick="stuView('profile')"></div>
+      </div>
+    </header>
+    <main class="dash-body" id="stu-body"></main>
+  </div>
+</div>
+
+<!-- =============================================
+     FACULTY DASHBOARD
+     ============================================= -->
+<div id="pg-faculty" class="page dash-page">
+  <aside class="sidebar" id="fac-sidebar">
+    <div class="sb-head">
+      <div class="brand-icon sm"><i class="fas fa-calendar-alt"></i></div>
+      <span class="sb-title">ChronoGrid</span>
+      <button class="sb-close" onclick="closeSidebar('fac-sidebar')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sb-user" id="fac-sbuser"></div>
+    <nav class="sb-nav">
+      <div class="sb-section">MAIN</div>
+      <a class="flink active" data-v="overview" onclick="facView('overview')"><i class="fas fa-th-large"></i><span>Overview</span></a>
+      <a class="flink" data-v="timetable" onclick="facView('timetable')"><i class="fas fa-calendar-week"></i><span>My Timetable</span></a>
+      <a class="flink" data-v="nextclass" onclick="facView('nextclass')"><i class="fas fa-clock"></i><span>Next Class</span></a>
+      <a class="flink" data-v="attendance" onclick="facView('attendance')"><i class="fas fa-clipboard-list"></i><span>Mark Attendance</span></a>
+      <div class="sb-section">EXTRAS</div>
+      <a class="flink" data-v="analytics" onclick="facView('analytics')"><i class="fas fa-chart-bar"></i><span>Class Analytics</span></a>
+      <a class="flink" data-v="leaves" onclick="facView('leaves')"><i class="fas fa-calendar-minus"></i><span>Leave Requests</span></a>
+      <a class="flink" data-v="announcements" onclick="facView('announcements')"><i class="fas fa-bullhorn"></i><span>Announcements</span></a>
+      <div class="sb-section">ACCOUNT</div>
+      <a class="flink" data-v="profile" onclick="facView('profile')"><i class="fas fa-user-circle"></i><span>Profile</span></a>
+      <a class="flink logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+    </nav>
+  </aside>
+  <div class="dash-main">
+    <header class="dash-hdr">
+      <button class="menu-btn" onclick="openSidebar('fac-sidebar')"><i class="fas fa-bars"></i></button>
+      <div class="hdr-title" id="fac-hdrtitle">Overview</div>
+      <div class="hdr-right">
+        <div class="hdr-clock" id="fac-clock"></div>
+        <div class="hdr-av" id="fac-hdrav" onclick="facView('profile')"></div>
+      </div>
+    </header>
+    <main class="dash-body" id="fac-body"></main>
+  </div>
+</div>
+
+<!-- =============================================
+     ADMIN DASHBOARD
+     ============================================= -->
+<div id="pg-admin" class="page dash-page">
+  <aside class="sidebar" id="adm-sidebar">
+    <div class="sb-head">
+      <div class="brand-icon sm"><i class="fas fa-calendar-alt"></i></div>
+      <span class="sb-title">ChronoGrid</span>
+      <button class="sb-close" onclick="closeSidebar('adm-sidebar')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sb-user" id="adm-sbuser"></div>
+    <nav class="sb-nav">
+      <div class="sb-section">OVERVIEW</div>
+      <a class="alink active" data-v="overview" onclick="admView('overview')"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+      <a class="alink" data-v="analytics" onclick="admView('analytics')"><i class="fas fa-chart-pie"></i><span>Analytics</span></a>
+      <div class="sb-section">PEOPLE</div>
+      <a class="alink" data-v="students" onclick="admView('students')"><i class="fas fa-user-graduate"></i><span>Students</span></a>
+      <a class="alink" data-v="faculty" onclick="admView('faculty')"><i class="fas fa-chalkboard-teacher"></i><span>Faculty</span></a>
+      <div class="sb-section">STRUCTURE</div>
+      <a class="alink" data-v="courses" onclick="admView('courses')"><i class="fas fa-book"></i><span>Courses & Sections</span></a>
+      <a class="alink" data-v="rooms" onclick="admView('rooms')"><i class="fas fa-door-open"></i><span>Rooms</span></a>
+      <a class="alink" data-v="subjects" onclick="admView('subjects')"><i class="fas fa-atom"></i><span>Subjects</span></a>
+      <a class="alink" data-v="timings" onclick="admView('timings')"><i class="fas fa-stopwatch"></i><span>Period Timings</span></a>
+      <div class="sb-section">TIMETABLE</div>
+      <a class="alink" data-v="viewtt" onclick="admView('viewtt')"><i class="fas fa-calendar-week"></i><span>View Timetables</span></a>
+      <a class="alink" data-v="manualtt" onclick="admView('manualtt')"><i class="fas fa-pencil-ruler"></i><span>Manual Entry</span></a>
+      <a class="alink" data-v="aigentt" onclick="admView('aigentt')"><i class="fas fa-robot"></i><span>AI Generator</span></a>
+      <div class="sb-section">COMM</div>
+      <a class="alink" data-v="notices" onclick="admView('notices')"><i class="fas fa-bell"></i><span>Notices</span></a>
+      <div class="sb-section">ACCOUNT</div>
+      <a class="alink" data-v="profile" onclick="admView('profile')"><i class="fas fa-user-shield"></i><span>Profile</span></a>
+      <a class="alink logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+    </nav>
+  </aside>
+  <div class="dash-main">
+    <header class="dash-hdr">
+      <button class="menu-btn" onclick="openSidebar('adm-sidebar')"><i class="fas fa-bars"></i></button>
+      <div class="hdr-title" id="adm-hdrtitle">Dashboard</div>
+      <div class="hdr-right">
+        <div class="hdr-clock" id="adm-clock"></div>
+        <div class="hdr-av" id="adm-hdrav" onclick="admView('profile')"></div>
+      </div>
+    </header>
+    <main class="dash-body" id="adm-body"></main>
+  </div>
+</div>
+
+<!-- =============================================
+     GLOBAL MODAL
+     ============================================= -->
+<div id="modal" class="modal-overlay" onclick="closeModalOuter(event)">
+  <div class="modal-box" id="modal-box">
+    <button class="modal-x" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    <div id="modal-inner"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toasts"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
